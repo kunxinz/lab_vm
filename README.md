@@ -36,7 +36,7 @@ docker pull kunxinz/lab-vm:xfce_cuda8.0 \
 #### 运行Server.py 文件。至此，lab_vm安装完毕
 docker_srv/venv/bin/python  docker_srv/Server.py
 
-#基本使用步骤
+# 基本使用步骤
 #### 打开浏览器，输入127.0.0.1:28123，即可访问web页面
 ![fig_lab_vm_index](readme_png/lam_vm主界面.png)
 #### 按照页面提示进行注册
