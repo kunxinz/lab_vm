@@ -1,26 +1,26 @@
-#实验室虚拟机 （lab_vm, laboratory virtual machine）
+# 实验室虚拟机 （lab_vm, laboratory virtual machine）
 为实验室服务器创建多个独立的vnc虚拟机（容器），保证主机安全与数据隔离。
 
-#特点
+# 特点
 * 基于docker，主机与容器环境隔离，数据和配置独立
 * 基于nvidia-docker2，容器内科使用GPU进行深度学习计算
 * 基于cuda9.2 和 cuda8.0 镜像
 * web 可视化容器管理与资源监控
 * 用户容器密码加密
 
-#运行平台
+# 运行平台
 ubuntu16.04 （其他平台未测试）、
 python3.5、
 cuda9.2、cuda8.0
 
-#安装条件
+# 安装条件
 * docker >= 1.12 (https://www.docker.com/)
 * GNU/Linux x86_64 with kernel version > 3.10
 * NVIDIA GPU with Architecture > Fermi (2.1)
 * NVIDIA drivers >= 387.26(cuda9.2), >=367.48(cuda8)
 * nvidia-docker2 (https://github.com/NVIDIA/nvidia-docker)
 
-#安装步骤
+# 安装步骤
 #### 安装docker 和 nvidia-docker2
 从[官网](https://docs.docker.com/install/linux/docker-ce/ubuntu/#install-from-a-package)安装docker \
 从[官网](https://github.com/NVIDIA/nvidia-docker)安装nvidia-docker2 \
