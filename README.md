@@ -52,7 +52,7 @@ docker_srv/venv/bin/python  docker_srv/Server.py
 * cuda9.2镜像支持tensorflow版本为1.5.0-1.10.0，对应cudnn版本7.0
 * 虚拟机不支持硬件opengl
 * nvidia驱动对docker支持不完善，服务器重启容易造成驱动崩溃，需要重装驱动，建议如无必要，不要重启服务器
-* 建议更改/etc/docker/daemon.jaon文件，将docker的dns设为国内的dns以加速访问
+* 建议更改/etc/docker/daemon.jon文件，将docker的dns设为国内的dns以加速访问
 * 以上测试平台信息为ubuntu16.04，python3.5，1080Ti，driver_ver=390.67
 
 #### 贡献者
