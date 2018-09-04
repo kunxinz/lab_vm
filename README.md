@@ -10,8 +10,7 @@
 
 # 运行平台
 ubuntu16.04 （其他平台未测试,理论上只要docker和nvidia-docker2安装成功即可）、\
-python3.5、\
-cuda9.2、cuda8.0
+python3、\
 
 # 安装条件
 * docker >= 1.12 (https://www.docker.com/)
