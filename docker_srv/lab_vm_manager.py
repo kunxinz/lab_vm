@@ -513,12 +513,15 @@ class __Um(object):
     def chk_stats_timer_func(self):
         # 获得运行容器的状态
         # print('chk')
-        ctans_dt = self.get_ctans_status()
-        userList = ctans_dt['running']
-        for name in userList:
-            self.res_info[name] = self.__get_ctan_verbose_stats(name)
+        try:
+            ctans_dt = self.get_ctans_status()
+            userList = ctans_dt['running']
+            for name in userList:
+                self.res_info[name] = self.__get_ctan_verbose_stats(name)
 
-        self.gpu_info = self.__get_gpu_info()
+            self.gpu_info = self.__get_gpu_info()
+        except:
+            traceback.print_exc()
 
         self.chk_stats_timer = threading.Timer(1, self.chk_stats_timer_func)
         self.chk_stats_timer.start()
@@ -758,8 +761,8 @@ class __Um(object):
                     if 60 < up_hour < 72:
                         # send emil
                         mail_addr = self.user_mail_dt[name]
-                        print('send mail {}'.format(mail_addr))
                         if mail_addr is not None and name not in self.mail_send_flag_ls:
+                            print('send mail {}'.format(mail_addr))
                             self.send_mail(mail_addr)
                             self.mail_send_flag_ls.append(name)
                     elif up_hour >= 72:
