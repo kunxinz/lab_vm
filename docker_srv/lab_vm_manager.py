@@ -3,6 +3,8 @@
 """
 @author: kun
 """
+import configparser
+
 __author__ = "kunxinz"
 __email__ = "kunxinz@qq.com"
 
@@ -29,9 +31,9 @@ pf_tm = PF_TM(False)  # debug to print time
 gcnmp = GCNBP.GetCtanNameByPID()  # class to get container name from process pid
 
 
-def get_Um(conf_dir, usr_data_dir, host_public_dir, crypt_key, init_port_base, port_num=10):
+def get_Um(conf_dir, crypt_key):
     try:
-        u = __Um(conf_dir, usr_data_dir, host_public_dir, crypt_key, init_port_base, port_num)
+        u = __Um(conf_dir, crypt_key)
     except Exception:
         traceback.print_exc()
         return False
@@ -40,25 +42,60 @@ def get_Um(conf_dir, usr_data_dir, host_public_dir, crypt_key, init_port_base, p
     return u
 
 
-def fix_Um(conf_dir, usr_data_dir, host_public_dir, crypt_key, init_port_base, port_num=10):
-    u = __Um(conf_dir, usr_data_dir, host_public_dir, crypt_key, init_port_base, port_num)
+def fix_Um(conf_dir, crypt_key):
+    u = __Um(conf_dir, crypt_key)
     u.fix()
 
 
 class __Um(object):
-    def __init__(self, conf_dir, usr_data_dir, host_public_dir, crypt_key, init_port_base=9000, port_num=10):
+    def __init__(self, conf_path, crypt_key):
+        # 配置参数默认文件
+        conf = configparser.ConfigParser(allow_no_value=True)
+        conf.read(conf_path)
+
+        # dir path
+        file_dir = os.path.dirname(__file__)  # 当前文件夹
+        self.docker_conf_dir = conf.get('lab_vm', 'docker_conf_dir')
+        self.user_data_dir = conf.get('lab_vm', 'docker_user_dir')
+        self.public_dir = conf.get('lab_vm', 'docker_conf_dir')
+
+        if self.docker_conf_dir == '':
+            self.docker_conf_dir = os.path.join(file_dir, 'docker_conf_dir')
+        if self.user_data_dir == '':
+            self.user_data_dir = os.path.join(file_dir, 'docker_user_dir')
+        if self.public_dir == '':
+            self.public_dir = os.path.join(file_dir, 'docker_public_dir')
+
+        # port args
+        self.init_port_base = int(conf.get('lab_vm', 'docker_port_base'))
+        self.port_num = int(conf.get('lab_vm', 'user_port_num'))
+
+        # img name
+        self.df_img = conf.get('ctan_default_args', 'img_name')
+
+        # 内存百分比和绝对值限制
+        self.df_mem_pcnt = float(conf.get('ctan_default_args', 'mem_limit_pcnt'))
+        self.df_mem_abs = conf.get('ctan_default_args', 'mem_limit_abs')
+        assert 0 < self.df_mem_pcnt <= 1 , 'mem_limit_pcnt value error'
+        # TODO 验证绝对值
+
+        # 共享内存百分比和绝对值限制
+        self.df_shm_pcnt = float(conf.get('ctan_default_args', 'shm_limit_pcnt'))
+        self.df_shm_abs = conf.get('ctan_default_args', 'shm_limit_abs')
+        assert 0 < self.df_shm_pcnt <= 1, 'shm_pcnt value error'
+
+        # cpu主机保留核心数
+        self.df_cpu_rest_core_num = int(conf.get('ctan_default_args', 'cpu_rest_core_num'))
+        assert isinstance(self.df_cpu_rest_core_num, int), 'cpu_rest_core_num value error'
+
         # get the containers
         self.api_client = docker.APIClient()
         self.client = docker.from_env()
         self.containers = self.client.containers
-        # dir path
-        self.public_dir = host_public_dir
-        self.user_data_dir = usr_data_dir
-        self.conf_dir = conf_dir
+
         # get the data dict
-        self.data_path = os.path.join(self.conf_dir, 'data_dt')
-        self.init_port_base = init_port_base
-        self.port_num = port_num
+        self.data_path = os.path.join(self.docker_conf_dir, 'data_dt')
+
         # data
         self.data_dt = {}
         self.user_port_dt = {}
@@ -294,7 +331,7 @@ class __Um(object):
             assert user_name not in self.user_port_dt.keys(), 'user name already exist'
             assert len(passwd) >= 6, 'passwd len is smaller than 6'
             # 获得镜像
-            img = "kunxinz/lab-vm:xfce_cuda8.0"
+            img = self.df_img
             # 获得端口映射
             port_base = self.generate_new_port_base()
             hport = list(range(int(port_base), int(port_base) + int(self.port_num)))
@@ -332,8 +369,18 @@ class __Um(object):
             vol_map = user_vol_map
 
             total_mem = psutil.virtual_memory().total
-            limit_mem = '{:d}g'.format(int(total_mem * 0.8 / 1024 / 1024 / 1024))
-            limit_sh_mem = '{:d}g'.format(int(total_mem * 0.5 / 1024 / 1024 / 1024))
+            limit_mem = '{:d}g'.format(int(total_mem * float(self.df_mem_pcnt) / 1024 / 1024 / 1024))
+            limit_sh_mem = '{:d}g'.format(int(total_mem * float(self.df_shm_pcnt) / 1024 / 1024 / 1024))
+            if self.df_mem_abs != '':
+                limit_mem = self.df_mem_abs
+            if self.df_shm_abs != '':
+                limit_sh_mem = self.df_shm_abs
+
+            if self.df_cpu_rest_core_num >= psutil.cpu_count():
+                print('warning, cpu reset core if larger than real count')
+                cpuset_cpus = '0-{:d}'.format(psutil.cpu_count()-1)
+            else:
+                cpuset_cpus = '0-{:d}'.format(psutil.cpu_count() - 1 - self.df_cpu_rest_core_num)
 
             # 生成容器
             self.containers.run(img,
@@ -357,7 +404,7 @@ class __Um(object):
                                 # 精细化特权,允许加载网络端口和重启
                                 cap_add=['NET_ADMIN'],
                                 # 允许使用的CPU范围，最后一个保留
-                                cpuset_cpus='0-{:d}'.format(cpu_count() - 2),
+                                cpuset_cpus=cpuset_cpus,
                                 # 共享内存大小
                                 shm_size=limit_sh_mem,
                                 # 挂在卷
@@ -373,16 +420,16 @@ class __Um(object):
 
             ctan = self.containers.get(user_name)
             # 复制初始化文件到用户home文件夹下
-            cmd = 'cp -r {} {}'.format(self.conf_dir, host_user_home)
+            cmd = 'cp -r {} {}'.format(self.docker_conf_dir, host_user_home)
             os.system(cmd)
             # 生成初始化脚本
-            sh_path = os.path.join('/home', user_name, os.path.split(self.conf_dir)[1], 'createUser.sh')
+            sh_path = os.path.join('/home', user_name, os.path.split(self.docker_conf_dir)[1], 'createUser.sh')
             init_str = "/bin/bash -c \"echo '{} {}' | {}\"".format(user_name, passwd, sh_path)
             # 执行初始化脚本
             ctan.exec_run(init_str)
             ctan.exec_run('/bin/bash /etc/rc.local')
             # remove the conf dir
-            shutil.rmtree(os.path.join(host_user_home, os.path.split(self.conf_dir)[1]))
+            shutil.rmtree(os.path.join(host_user_home, os.path.split(self.docker_conf_dir)[1]))
             # 成功后更新存储表
             start_time = int(time.time())
 
@@ -520,8 +567,8 @@ class __Um(object):
                 self.res_info[name] = self.__get_ctan_verbose_stats(name)
 
             self.gpu_info = self.__get_gpu_info()
-        except:
-            traceback.print_exc()
+        except Exception as e:
+            print(e)
 
         self.chk_stats_timer = threading.Timer(1, self.chk_stats_timer_func)
         self.chk_stats_timer.start()

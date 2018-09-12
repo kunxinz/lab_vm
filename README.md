@@ -36,7 +36,7 @@ docker pull kunxinz/lab-vm:xfce_cuda8.0 \
 docker_srv/venv/bin/python  docker_srv/Server.py
 
 # 基本使用步骤
-#### 打开浏览器，输入127.0.0.1:28123，即可访问web页面
+#### 打开浏览器，输入127.0.0.1:28125，即可访问web页面
 ![fig_lab_vm_index](readme_png/lam_vm主界面.png)
 #### 按照页面提示进行注册
 ![fig_lab_vm_index](readme_png/register.png)
@@ -47,13 +47,16 @@ docker_srv/venv/bin/python  docker_srv/Server.py
 #### 执行nvidia_smi，若成功则表示虚拟机可使用显卡
 ![fig_nvidia_test](readme_png/nvidia_test.png)
 
+
 # ps
 * cuda8.0镜像支持tensorflow版本为1.3.0-1.4.1，对应cudnn版本6.0
 * cuda9.2镜像支持tensorflow版本为1.5.0-1.10.0，对应cudnn版本7.0
+* 可修改lab_vm.conf配置文件来更改相应参数
 * 虚拟机不支持硬件opengl
 * nvidia驱动对docker支持不完善，服务器重启容易造成驱动崩溃，需要重装驱动，建议如无必要，不要重启服务器
 * 建议更改/etc/docker/daemon.json文件，将docker的dns设为国内的dns以加速访问
 * 以上测试平台信息为ubuntu16.04，python3.5，1080Ti，driver_ver=390.67
+
 
 #### 贡献者
 [kunxinz](https://github.com/kunxinz)、

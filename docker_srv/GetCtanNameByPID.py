@@ -36,11 +36,9 @@ class GetCtanNameByPID(object):
         pidDir = None
         if self.pid in self.__getCurrentAllPids():
             pidDir = os.path.join(self.proc, str(self.pid))
-        if os.path.exists(pidDir):
-            pass
-        else:
-            print('pid is not exist!')
-            sys.exit(1)
+        if not os.path.exists(pidDir):
+            raise RuntimeError('pid is not exist!')
+
         try:
             with open(os.path.join(pidDir, "status"), 'r') as f:
                 content = f.read().strip().split("\n")
@@ -48,8 +46,8 @@ class GetCtanNameByPID(object):
                     kv = item.replace('\t', ' ').split(":")
                     status[kv[0].strip()] = kv[1].strip()
         except IOError:
-            print('pid is not exist!')
-            sys.exit(1)
+            raise RuntimeError('pid is not exist!')
+
         return dict(status)
 
     def __getCmdline(self):
@@ -59,18 +57,17 @@ class GetCtanNameByPID(object):
         if self.pid in self.__getCurrentAllPids():
             pidDir = os.path.join(self.proc, str(self.pid))
         else:
-            print('pid is not exist! Aborted!')
-            sys.exit(1)
+            raise RuntimeError('pid not exist')
 
         if os.path.exists(pidDir):
             pass
         else:
-            raise RuntimeError('cmdline is None or \'\', this always means pid is NOT exist! Aborted! ')
+            raise RuntimeError('cmdline is None or "", this always means pid is NOT exist! Aborted! ')
 
         with open(os.path.join(pidDir, "cmdline"), 'r') as f:
             cmdline = f.read().strip().replace('\x00', ' ').strip()
             if cmdline is None or cmdline == '':
-                raise RuntimeError('cmdline is None or \'\', this always means pid is NOT exist! Aborted! ')
+                raise RuntimeError("cmdline is None or '', this always means pid is NOT exist! Aborted! ")
 
         return str(cmdline)
 

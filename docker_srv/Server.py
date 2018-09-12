@@ -111,7 +111,7 @@ class deleteUserHandler(BaseHandler):
 
 class verifyPasswordHandler(BaseHandler):
     def get(self, username, passwd):
-        print('valid passwd {}'.format(passwd))
+        # print('valid passwd {}'.format(passwd))
         res = "failed"
         try:
             if um.valid_user_passwd(username, passwd):
@@ -373,34 +373,29 @@ um = None
 
 def main():
     opts, args = getopt.getopt(sys.argv[1:], "hc:")
-    conf_dir = None
+    conf_path = None
     for op, value in opts:
         if op == "-c":
-            conf_dir = value
-    if conf_dir is None:
-        conf_dir = 'lab_vm.conf'
+            conf_path = value
+        if op == "-h":
+            help_str = 'python -c conf_path Server.py \n' \
+                       ' conf_path is the path to config file, default is lab_vm.conf'
+            print(help_str)
+            return
+
+    if conf_path is None:
+        conf_path = 'lab_vm.conf'
 
     # um_key = getpass.getpass('Input your password')
     global um, host_name
     um_key = '1234567890'
 
-    file_dir = os.path.dirname(__file__)  # 当前文件夹
     conf = configparser.ConfigParser(allow_no_value=True)
-    conf.read(conf_dir)
-    docker_conf_dir = conf.get('lab_vm', 'docker_conf_dir')  # docker配置文件夹
-    docker_user_dir = conf.get('lab_vm', 'docker_user_dir')  # docker用户文件夹，存储用户home文件
-    docker_public_dir = conf.get('lab_vm', 'docker_public_dir')  # docker公共文件夹，所有虚拟机均可访问
-    if docker_conf_dir == '':
-        docker_conf_dir = os.path.join(file_dir, 'docker_conf_dir')
-    if docker_user_dir == '':
-        docker_user_dir = os.path.join(file_dir, 'docker_user_dir')
-    if docker_public_dir == '':
-        docker_public_dir = os.path.join(file_dir, 'docker_public_dir')
-    ls_port = conf.get('lab_vm', 'web_listen_port')  # web监听端口
-    docker_port_base = conf.get('lab_vm', 'docker_port_base')  # 虚拟机用户开始的端口
-    port_num = conf.get('lab_vm', 'user_port_num') # 每个用户分配端口数目
+    conf.read(conf_path)
 
-    um = UM.get_Um(docker_conf_dir, docker_user_dir, docker_public_dir, um_key, docker_port_base, port_num=port_num)
+    ls_port = conf.get('web', 'web_listen_port')  # web监听端口
+
+    um = UM.get_Um(conf_path, um_key)
     # print(um)
     application = tornado.web.Application([
         (r"/", MainHandler),
