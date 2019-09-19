@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+
+<meta charset="utf-8">
+
+<script type="text/javascript">
+function loadXMLDoc()
+{
+	var xmlhttp;
+	if (window.XMLHttpRequest) {// code for IE7+, Firefox, Chrome, Opera, Safari
+		xmlhttp=new XMLHttpRequest();
+	}
+	else {// code for IE6, IE5
+		xmlhttp=new ActiveXObject("Microsoft.XMLHTTP");
+	}
+	xmlhttp.onreadystatechange=function() {
+		if (xmlhttp.readyState==4 && xmlhttp.status==200) {
+	    	document.getElementById("status").innerHTML=xmlhttp.responseText;
+		}
+	}
+	xmlhttp.open("GET","/update_status/",true);
+	xmlhttp.send();
+}
+
+function updateStatus()
+{
+	loadXMLDoc()
+	t=setTimeout('updateStatus()',1000)
+}
+
+</script>
+
+	<meta charset="utf-8">
+    <title>Cmax-GPU-Status</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://apps.bdimg.com/libs/bootstrap/3.2.0/css/bootstrap.min.css">
+
+ <body onload="updateStatus()">
+
+ <div class="container-fluid">
+	<div class="row-fluid" style="padding-right: 50px;padding-left: 50px;">
+		<div class="span4">
+		</div>
+		<div id="status" class="span4" style="font-family: courier;line-height: 80%">
+<br>Thu&nbsp;May&nbsp;31&nbsp;03:25:46&nbsp;2018</br>
+<br>+-----------------------------------------------------------------------------+</br>
+<br>|&nbsp;NVIDIA-SMI&nbsp;381.22&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Driver&nbsp;Version:&nbsp;381.22&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|</br>
+<br>|-------------------------------+----------------------+----------------------+</br>
+<br>|&nbsp;GPU&nbsp;&nbsp;Name&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Persistence-M|&nbsp;Bus-Id&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Disp.A&nbsp;|&nbsp;Volatile&nbsp;Uncorr.&nbsp;ECC&nbsp;|</br>
+<br>|&nbsp;Fan&nbsp;&nbsp;Temp&nbsp;&nbsp;Perf&nbsp;&nbsp;Pwr:Usage/Cap|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Memory-Usage&nbsp;|&nbsp;GPU-Util&nbsp;&nbsp;Compute&nbsp;M.&nbsp;|</br>
+<br>|===============================+======================+======================|</br>
+<br>|&nbsp;&nbsp;&nbsp;0&nbsp;&nbsp;GeForce&nbsp;GTX&nbsp;108...&nbsp;&nbsp;Off&nbsp;&nbsp;|&nbsp;0000:02:00.0&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Off&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;N/A&nbsp;|</br>
+<br>|&nbsp;&nbsp;0%&nbsp;&nbsp;&nbsp;49C&nbsp;&nbsp;&nbsp;&nbsp;P2&nbsp;&nbsp;&nbsp;&nbsp;63W&nbsp;/&nbsp;250W&nbsp;|&nbsp;&nbsp;11164MiB&nbsp;/&nbsp;11172MiB&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0%&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Default&nbsp;|</br>
+<br>+-------------------------------+----------------------+----------------------+</br>
+<br>|&nbsp;&nbsp;&nbsp;1&nbsp;&nbsp;Tesla&nbsp;K40c&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Off&nbsp;&nbsp;|&nbsp;0000:82:00.0&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Off&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0&nbsp;|</br>
+<br>|&nbsp;27%&nbsp;&nbsp;&nbsp;54C&nbsp;&nbsp;&nbsp;&nbsp;P0&nbsp;&nbsp;&nbsp;&nbsp;65W&nbsp;/&nbsp;235W&nbsp;|&nbsp;&nbsp;11439MiB&nbsp;/&nbsp;11439MiB&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0%&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Default&nbsp;|</br>
+<br>+-------------------------------+----------------------+----------------------+</br>
+<br></br>
+<br>+-----------------------------------------------------------------------------+</br>
+<br>|&nbsp;Processes:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;GPU&nbsp;Memory&nbsp;|</br>
+<br>|&nbsp;&nbsp;GPU&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PID&nbsp;&nbsp;Type&nbsp;&nbsp;Process&nbsp;name&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Usage&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|</br>
+<br>|=============================================================================|</br>
+<br>+-----------------------------------------------------------------------------+</br>
+		</div>
+		<div class="span4">
+		</div>
+	</div>
+</div>
+
+
+</body>
+
+</html>

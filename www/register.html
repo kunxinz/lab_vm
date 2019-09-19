@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="zh">
+	<head>
+		<meta charset="utf-8">
+		<title>A207-CmaxServer</title>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+		<!-- Loading Bootstrap -->
+		<link href="{{ static_url("css/vendor/bootstrap/css/bootstrap.min.css")}}" rel="stylesheet">
+		<!-- Loading Flat UI -->
+		<link href="{{ static_url("css/flat-ui.css")}}" rel="stylesheet">
+		<link href="{{ static_url("css/spinkit.css")}}" rel="stylesheet">
+    <!-- favicon -->
+    <link rel="bookmark" type="image/x-icon" href="{{ static_url('img/favicon.ico')}}" mce_href="{{ static_url('img/favicon.ico')}}"/>
+    <link rel="icon" type="image/x-icon" href="{{ static_url('img/favicon.ico')}}" mce_href="{{ static_url('img/favicon.ico')}}"/>
+    <link rel="shortcut icon" type="image/x-icon" href="{{ static_url('img/favicon.ico')}}" mce_href="{{ static_url('img/favicon.ico')}}"/>
+		<style type="text/css">
+			td{
+				vertical-align: middle!important;
+			}
+			.running{
+				color: green;
+			}
+			.stoped{
+				color: red;
+			}
+			.footer{
+				height: 80px;
+				width: 100%;
+				overflow: auto;
+				color:#777;
+				vertical-align: middle;
+				text-align: center;
+			}
+			.copyright{
+				margin-top: 15px;
+			}
+			#container{
+				min-height: 800px;
+			}
+		</style>
+		<script type="text/javascript">
+      function init(){
+				$.get("/init/get_server_name", {}, function(res){
+          document.getElementById("server_name").innerHTML=res;
+				});
+				$.get("/init/modify_title", {}, function(res){
+				  if(res!="")document.title = res;
+        });
+      }
+
+			function onStartClick(username) {
+				$("#table").attr("hidden","hidden");
+				$("#container").html('<br><br><br><div class="sk-wave"><div class="sk-rect sk-rect1"></div><div class="sk-rect sk-rect2"></div><div class="sk-rect sk-rect3"></div><div class="sk-rect sk-rect4"></div><div class="sk-rect sk-rect5"></div></div>');
+
+				$.get("/start/" + username, {}, function(res){
+					if(res == "succeed"){
+						window.location.reload();
+					}
+				});
+			}
+				function onRegisterClick() {
+					var name = String($("#username").val());
+					var passwd = String($("#passwd").val());
+					var managerPasswd = String($("#managerPasswd").val());
+          var remark = String($("#remark").val());
+          console.log(remark);
+					var phone = String($("#phone").val());
+          passwd = passwd.replace(/#/g, "%23");
+          passwd = passwd.replace(/\?/g, "%3F");
+          passwd = passwd.replace(/\//g, "%2F");
+          passwd = passwd.replace(/:/g, "%3A");
+          managerPasswd = managerPasswd.replace(/#/g, "%23");
+          managerPasswd = managerPasswd.replace(/\?/g, "%3F");
+          managerPasswd = managerPasswd.replace(/\//g, "%2F");
+          managerPasswd = managerPasswd.replace(/:/g, "%3A");
+          for(var i=0;i<name.length;i++)if(!(name[i]>='0'&&name[i]<='9') && !(name[i]>='A'&&name[i]<='Z') && !(name[i]>='a'&&name[i]<='z')){
+            alert("名称非法");
+            return;
+          }
+					var mail = String($("#mail").val());
+					if(passwd.length < 6) {
+						alert("密码长度至少6位");
+						return;
+					}
+					var format_check = /^[a-zA-Z0-9_.-]+@[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)*\.[a-zA-Z0-9]{2,6}$/
+          if(!format_check.test(mail)){
+					  alert("邮箱格式错误");
+            return;
+          }
+          $("#container").attr("hidden", "hidden");
+          $("#loading").html('<br><br><br><div class="sk-wave"><div class="sk-rect sk-rect1"></div><div class="sk-rect sk-rect2"></div><div class="sk-rect sk-rect3"></div><div class="sk-rect sk-rect4"></div><div class="sk-rect sk-rect5"></div></div><p style="text-align:center;vertical-align:middle;">虚拟机正在创建，该过程可能会比较长，请耐心等候...</p>');
+
+          $.ajax({
+              url: "/add/" + name + "/" + remark + "/" + passwd + "/" + mail + "/" + phone + "/" + managerPasswd,
+              type: "GET",
+              data: {},
+              timeout: 20000,
+              success: function (data, status) {
+                console.log(data);
+                if (data == "succeed") {
+                    alert("创建成功");
+                    window.location = "/";
+                    return;
+                }
+                else if(data == "failed"){
+                  alert("创建失败");
+                  window.location = "/";
+                  return;
+                }
+                else if(data == "invManagePass"){
+                  alert("管理员密码错误");
+                  window.location = "/";
+                  return;
+                }
+                else{
+                  alert("创建成功与否未知，返回主页查看是否成功创建");
+                  window.location = "/";
+                  return;
+                }
+              },
+              error: function (XMLHttpRequest, textStatus, errorThrown) {
+                if(textStatus=="timeout")alert("超时，返回主页查看是否成功创建");
+                else alert("出现未知错误，返回主页查看是否成功创建");
+                window.location= "/";
+              }
+            });
+				}
+				function sleep(numberMillis) {
+          var now = new Date();
+          var exitTime = now.getTime() + numberMillis;
+          while (true) {
+            now = new Date();
+            if (now.getTime() > exitTime)return;
+          }
+        }
+		</script>
+	</head>
+	<body onload="init()">
+		<nav class="navbar navbar-default" role="navigation" style="z-index:1;width:100%;left=0;position:fixed;top:0;opacity: 0%">
+			<div class="navbar-header">
+				<button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar-collapse-01">
+					<span class="sr-only">Toggle navigation</span>
+				</button>
+        <a class="navbar-brand" href="/"><span id="server_name">Cmax-Server</span></a>
+			</div>
+			<div class="collapse navbar-collapse" id="navbar-collapse-01">
+				<ul class="nav navbar-nav">
+					<li class="active"><a href="/register/" >注册</a></li>
+					<li><a href="/status_cpu/">资源监控</a></li>
+				</ul>
+
+			</div><!-- /.navbar-collapse -->
+		</nav><!-- /navbar -->
+    <br><br><br>
+		<div id="loading">
+			<!-- Space for loading animation -->
+		</div>
+
+		<div id="container" class="container">
+				<pre class="prettyprint mvl prettypreinted">
+					<span><strong>须知:</strong></span>
+					<span>1. 请牢记密码，该密码为你的root密码和VNC连接密码</span>
+					<span>2. 虚拟机用完请关掉，节省服务器资源</span>
+				</pre>
+				<br>
+				<p>用户名:</p>
+				<input id="username" type="text" class="form-control input-lg" placeholder="你的用户名(英文或数字)" />
+				<br>
+        <br>
+				<p>备注:</p>
+				<input id="remark" type="text" class="form-control input-lg" placeholder="你的中文姓名" />
+				<br>
+				<br>
+				<p>密码:</p>
+				<input id="passwd" type="password" class="form-control input-lg" placeholder="密码至少为6位" />
+				<br>
+        <br>
+				<p>E-mail:</p>
+				<input id="mail" type="text" class="form-control input-lg" placeholder="你的邮箱地址" />
+				<br>
+        <br>
+				<p>手机:</p>
+				<input id="phone" type="text" class="form-control input-lg" placeholder="你的手机号码" />
+				<br>
+				<br>
+				<p>管理员密码:</p>
+				<input id="managerPasswd" type="password" class="form-control input-lg" placeholder="" />
+				<br>
+				<br>
+				<button class="btn btn-primary" onclick="onRegisterClick()">创建虚拟机!</button>
+		</div><!-- /.container -->
+
+		<footer class="footer" role="contentinfo">
+			<div class="footer" style="text-align:center;">
+			<p class="copyright">
+				Copyright &nbsp &nbsp 2017-2018 by
+				<a href="https://hellokenlee.github.io">KenLee</a>
+				 and
+				<a href="https://github.com/WideLee">Limkuan</a>
+			</p>
+			<p class="copyright">
+				Maintain by
+				<a href="https://github.com/WideLee">Limkuan</a>
+				 、
+				<a href="https://hellokenlee.github.io">KenLee</a>
+				 、
+				<a href="https://">kunxinz</a>
+				 、
+				<a href="https://github.com/aruyuna9531">yuna~</a>
+				 、
+				<a href="https://">hetao</a>
+			</p>
+			</div>
+		</footer><!-- /.footer -->
+
+		<!-- jQuery (necessary for Flat UI"s JavaScript plugins) -->
+		<script src="{{ static_url("js/vendor/jquery.min.js")}}"></script>
+		<!-- Include all compiled plugins (below), or include individual files as needed -->
+		<script src="{{ static_url("js/vendor/video.js")}}"></script>
+		<script src="{{ static_url("js/flat-ui.min.js")}}"></script>
+	</body>
+</html>

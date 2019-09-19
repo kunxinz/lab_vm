@@ -46,7 +46,8 @@ docker_srv/venv/bin/python  docker_srv/Server.py
 ![fig_vnc_view](readme_png/vnc_view.png)
 #### 执行nvidia_smi，若成功则表示虚拟机可使用显卡
 ![fig_nvidia_test](readme_png/nvidia_test.png)
-
+#### 进入资源监控界面，则可观察硬件资源使用情况
+![fig_resource](readme_png/resource.png)
 
 # ps
 * cuda8.0镜像支持tensorflow版本为1.3.0-1.4.1，对应cudnn版本6.0
@@ -55,7 +56,7 @@ docker_srv/venv/bin/python  docker_srv/Server.py
 * 虚拟机不支持硬件opengl
 * nvidia驱动对docker支持不完善，服务器重启容易造成驱动崩溃，需要重装驱动，建议如无必要，不要重启服务器
 * 建议更改/etc/docker/daemon.json文件，将docker的dns设为国内的dns以加速访问
-* 以上测试平台信息为ubuntu16.04，python3.5，1080Ti，driver_ver=390.67
+* 以上测试平台信息为ubuntu16.04，python3.5，1080Ti，driver_ver=390.67，docker-ce_18.06.1，nvidia-docker2_2.0.3
 
 
 #### 贡献者
