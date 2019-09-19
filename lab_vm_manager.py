@@ -148,7 +148,7 @@ class __Um(object):
 
         # read the data dict
         if (not os.path.exists(self.data_path)) or os.path.getsize(self.data_path) == 0 :
-            self.port_data_ls_dt = {str(self.port_start): None}
+            self.port_data_ls_dt = {}
             self.avail_port_st = set(range(self.port_start, self.port_stop))
             self.save_data()
         else:
@@ -170,23 +170,24 @@ class __Um(object):
 
         # 定期检查容器的运行时间，周期1min
         self.time_check_flag = conf.get('ctan_default_args', 'time_check_flag') == str(True)
-        self.checkTimePeriod = 60
-        self.timer = threading.Timer(self.checkTimePeriod, self.fun_timer_func)
-        self.timer.start()
         self.mail_send_flag_ls = []
         self.time_send_mail = int(conf.get('ctan_default_args', 'time_send_mail'))
         self.time_stop_ctan = int(conf.get('ctan_default_args', 'time_stop_ctan'))
+        self.checkTimePeriod = 60
+        self.timer = threading.Timer(self.checkTimePeriod, self.fun_timer_func)
+        # self.timer.start()
+
 
         # 定期检查资源状态，周期2s
         self.updateStatusPeriod = 2
         self.chk_stats_timer = threading.Timer(self.updateStatusPeriod, self.chk_stats_timer_func)
-        self.chk_stats_timer.start()
+        # self.chk_stats_timer.start()
 
     # 容器基本操作
     def create_user(self, user_name, passwd, mail=None, remark='无', phone='0'):
         # 寻找一个新端口给容器使用
         def generate_new_start_port():
-            self.load_data()
+            self.load_data()  # 刷新数据
             def is_idle(port, ctnu=1):
                 idle_flag = True
                 for i in range(0, 0 + ctnu):
@@ -341,7 +342,8 @@ class __Um(object):
 
             hash_pw = bcrypt.hashpw(passwd.encode('utf_8'), bcrypt.gensalt(10))
             self.port_data_ls_dt[str(start_port)] = [user_name, hash_pw, mail, start_time, remark, phone]
-            self.avail_port_st = self.avail_port_st.difference(set(range(start_port, start_port+self.port_step)))
+            self.used_port_st.update(set(range(start_port, start_port+self.port_step)))
+            self.avail_port_st = self.avail_port_st.difference(self.used_port_st)
             self.save_data()
             return True
         except Exception:
@@ -351,16 +353,13 @@ class __Um(object):
     def start(self, user_name):
         try:
             ctan = self.containers.get(user_name)
-
             p = self.user_port_dt[user_name]
             self.port_data_ls_dt[p][self.idx_starttime] = int(datetime.now().timestamp())
             self.save_data()
             # 需要在启动前写入文件，否则容易启动中时数据还没有更新完毕导致时间错误
             ctan.start()
-            # exec the rc.local shell
             ctan.exec_run('/bin/bash /etc/rc.local')
 
-            # self.lvm_mount.mount_by_name(user_name)
         except:
             traceback.print_exc()
             return False
@@ -371,7 +370,6 @@ class __Um(object):
             ctan = self.containers.get(user_name)
             ctan.exec_run('/bin/bash /etc/rc.preShutdown')
             ctan.stop()
-            # self.lvm_mount.umount_by_name(user_name)
         except:
             traceback.print_exc()
             return False
@@ -379,16 +377,14 @@ class __Um(object):
 
     def remove(self, user_name):
         try:
+            # 先数据删除，然后再实际删除，这样哪怕实际删除不成功，也可以通过外部环境删除而不会造成数据损坏
+            port = int(self.user_port_dt[user_name])
+            self.avail_port_st.update(set(range(port, port+self.port_step)))
+            del self.port_data_ls_dt[str(port)]
+            self.save_data()
             ctan = self.containers.get(user_name)
             ctan.stop()
             ctan.remove()
-            # write the None into file
-            port = self.user_port_dt[user_name]
-            self.avail_port_st.update(set(range(port, port+self.port_step)))
-            self.save_data()
-
-            # remove the umount point
-            # self.lvm_mount.umount_by_name(user_name)
         except:
             traceback.print_exc()
             return False
