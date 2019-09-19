@@ -1,0 +1,20 @@
+#!/bin/bash
+set -x
+exec 1>/tmp/rc.log 2>&1
+User=root
+#docker配置，不要更改
+VNC_RESOLUTION=1920x1080
+DISPLAY=1
+vncserver -kill :$DISPLAY || rm -rfv /tmp/.X*-lock /tmp/.X11-unix 
+# 开启了vnc桌面后，主文件骨架才生成
+su $User -c "vncserver :$DISPLAY -geometry $VNC_RESOLUTION"
+#su $User -c "/bin/bash /dockerstartup/vnc_startup.sh"
+service ssh start
+
+#自定义启动配置开始
+#注意，这里默认是以root身份启动，如果要以普通身份启动，请用su切换身份执行
+#例如 su $USER -c "echo hellp"
+
+
+#自定义启动配置结束
+exit 0

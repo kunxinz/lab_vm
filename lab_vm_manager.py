@@ -13,7 +13,7 @@ import time
 import socket
 import paramiko
 from collections import defaultdict
-import configparser
+import configparser, copy
 
 # venv
 import psutil
@@ -50,7 +50,7 @@ class __Um(object):
                 rawInfo = self.api_client.inspect_container(user_name)
                 return rawInfo['HostConfig']['PortBindings'][str(port) + '/' + proto][0]['HostPort']
 
-            for port, val in self.data_dt_basePort.items():
+            for port, val in self.port_data_ls_dt.items():
                 if val is None:
                     continue
                 user = val[0]
@@ -109,8 +109,10 @@ class __Um(object):
         self.df_cpu_rest_core_num = int(conf.get('ctan_default_args', 'cpu_rest_core_num'))
 
         # port args
-        self.init_port_base = int(conf.get('lab_vm', 'docker_port_base'))
-        self.port_num = int(conf.get('lab_vm', 'docker_user_port_num'))
+        self.port_start = int(conf.get('lab_vm', 'docker_port_start'))
+        self.port_step = int(conf.get('lab_vm', 'docker_port_step'))
+        assert self.port_step >=4, 'port_step is less than 4'
+        self.port_stop = int(conf.get('lab_vm', 'docker_port_stop'))
 
         assert isinstance(self.df_cpu_rest_core_num, int), 'cpu_rest_core_num value error'
 
@@ -123,10 +125,12 @@ class __Um(object):
         self.containers = self.client.containers
 
         # data
-        self.data_dt_basePort = {}
+        self.port_data_ls_dt = {}
+        self.avail_port_st = set()
+        self.used_port_st = set()
+        self.stand_port_st = set(range(self.port_start, self.port_stop))
         self.user_port_dt = {}
         self.user_mail_dt = {}
-        self.all_port_ls = []
         self.user_ls = []
         self.user_starttime_dt = {}
 
@@ -143,8 +147,9 @@ class __Um(object):
         del crypt_key
 
         # read the data dict
-        if (not os.path.exists(self.data_path)) or os.path.getsize(self.data_path) == 0:
-            self.data_dt_basePort = {str(self.init_port_base): None}
+        if (not os.path.exists(self.data_path)) or os.path.getsize(self.data_path) == 0 :
+            self.port_data_ls_dt = {str(self.port_start): None}
+            self.avail_port_st = set(range(self.port_start, self.port_stop))
             self.save_data()
         else:
             self.load_data()
@@ -179,10 +184,9 @@ class __Um(object):
 
     # 容器基本操作
     def create_user(self, user_name, passwd, mail=None, remark='无', phone='0'):
-        def generate_new_port_base():
+        # 寻找一个新端口给容器使用
+        def generate_new_start_port():
             self.load_data()
-            new_port = None
-
             def is_idle(port, ctnu=1):
                 idle_flag = True
                 for i in range(0, 0 + ctnu):
@@ -193,7 +197,6 @@ class __Um(object):
                         sTCP.listen(1)
                         sUDP.bind(('', int(port) + i))
                     except:
-                        traceback.print_exc()
                         idle_flag = False
                     finally:
                         sTCP.close()
@@ -202,21 +205,21 @@ class __Um(object):
                             break
                 return idle_flag
 
-            try:
-                new_port_ls = [port for port, val in self.data_dt_basePort.items() if val is None]
-                for new_port in new_port_ls:
-                    if is_idle(new_port, self.port_num):
-                        return int(new_port)
-                new_port = None  # if the port is not idle, that set new_port to be None
-            except Exception:
-                pass
-            finally:
-                if new_port is None:  # it means that all ports is used or the port is not idle
-                    port_num_ls = [int(x) for x in self.all_port_ls]
-                    new_port = max(port_num_ls) + self.port_num
-                    while not is_idle(new_port, self.port_num):
-                        new_port = new_port + self.port_num
-            return int(new_port)
+            tmp_avail_port_st = copy.deepcopy(self.avail_port_st)
+            while True:
+                assert tmp_avail_port_st != set(), 'there is no available port'
+                tmp_min_port = min(tmp_avail_port_st)
+                tmp_ready_port_st = set(range(tmp_min_port, tmp_min_port+self.port_step))  # 准备申请连续的端口集
+                if not tmp_ready_port_st.issubset(self.avail_port_st):  # 没有连续的可用端口集
+                    tmp_avail_port_st = tmp_avail_port_st.difference(tmp_ready_port_st)  # 去除这些连续端口集
+                    continue
+                else:
+                    # 找到一个可用连续端口集，检测是否被占用
+                    if not is_idle(tmp_min_port, self.port_step):
+                        tmp_avail_port_st = tmp_avail_port_st.difference(tmp_ready_port_st)
+                        continue
+                    else:
+                        return int(tmp_min_port)
 
         try:
             # 检查名字是否重合和密码是否小于6位
@@ -225,9 +228,9 @@ class __Um(object):
             # 获得镜像
             img = self.df_img
             # 获得端口映射
-            port_base = generate_new_port_base()
-            hport = list(range(int(port_base), int(port_base) + self.port_num))
-            cport = list(range(8080, 8080 + self.port_num - 2))
+            start_port = generate_new_start_port()
+            hport = list(range(int(start_port), int(start_port) + self.port_step))
+            cport = list(range(8080, 8080 + self.port_step - 2))
             cport = [22, 5901] + cport  # ssh vnc 8080 8081 ... 8087
             port_map = dict(zip(cport, hport))
 
@@ -337,7 +340,8 @@ class __Um(object):
             start_time = int(time.time())
 
             hash_pw = bcrypt.hashpw(passwd.encode('utf_8'), bcrypt.gensalt(10))
-            self.data_dt_basePort[str(port_base)] = [user_name, hash_pw, mail, start_time, remark, phone]
+            self.port_data_ls_dt[str(start_port)] = [user_name, hash_pw, mail, start_time, remark, phone]
+            self.avail_port_st = self.avail_port_st.difference(set(range(start_port, start_port+self.port_step)))
             self.save_data()
             return True
         except Exception:
@@ -349,7 +353,7 @@ class __Um(object):
             ctan = self.containers.get(user_name)
 
             p = self.user_port_dt[user_name]
-            self.data_dt_basePort[p][self.idx_starttime] = int(datetime.now().timestamp())
+            self.port_data_ls_dt[p][self.idx_starttime] = int(datetime.now().timestamp())
             self.save_data()
             # 需要在启动前写入文件，否则容易启动中时数据还没有更新完毕导致时间错误
             ctan.start()
@@ -357,8 +361,8 @@ class __Um(object):
             ctan.exec_run('/bin/bash /etc/rc.local')
 
             # self.lvm_mount.mount_by_name(user_name)
-        except Exception as ex:
-            print(ex)
+        except:
+            traceback.print_exc()
             return False
         return True
 
@@ -368,8 +372,8 @@ class __Um(object):
             ctan.exec_run('/bin/bash /etc/rc.preShutdown')
             ctan.stop()
             # self.lvm_mount.umount_by_name(user_name)
-        except Exception as ex:
-            print(ex)
+        except:
+            traceback.print_exc()
             return False
         return True
 
@@ -380,7 +384,7 @@ class __Um(object):
             ctan.remove()
             # write the None into file
             port = self.user_port_dt[user_name]
-            self.data_dt_basePort[port] = None
+            self.avail_port_st.update(set(range(port, port+self.port_step)))
             self.save_data()
 
             # remove the umount point
@@ -393,7 +397,7 @@ class __Um(object):
     def reset_startime(self, username):
         p = self.user_port_dt[username]
         newtime_stamp = int(time.time())
-        self.data_dt_basePort[p][self.idx_starttime] = newtime_stamp
+        self.port_data_ls_dt[p][self.idx_starttime] = newtime_stamp
         self.save_data()
         return True
 
@@ -415,11 +419,12 @@ class __Um(object):
             return validiflag
 
         port = self.user_port_dt[user_name]
-        hashed_pw = self.data_dt_basePort[port][self.idx_passwd]
+        hashed_pw = self.port_data_ls_dt[port][self.idx_passwd]
         return bcrypt.checkpw(passwd.encode(), hashed_pw)
 
     def save_data(self):
-        data_byte = dill.dumps(self.data_dt_basePort)
+        save_data_ls = [self.port_data_ls_dt, self.used_port_st]
+        data_byte = dill.dumps(save_data_ls)
         # ctypt the data
         length = 16
         count = len(data_byte)
@@ -429,27 +434,32 @@ class __Um(object):
             wri_byte = self.__ciper.encrypt(data_byte)
         else:
             wri_byte = data_byte
-        # save it
         with open(self.data_path, 'wb') as f:
             dill.dump(wri_byte, f)  # convert to hex format and save it
+
         # refresh the data
-        self.data_dt_basePort = dill.loads(data_byte)
-        self.all_port_ls = list(self.data_dt_basePort.keys())
-        self.user_mail_dt = {val[self.idx_user]: (val[self.idx_mail] if len(val) >= 3 else None) for val in self.data_dt_basePort.values() if val is not None}
-        self.user_port_dt = {val[self.idx_user]: port for port, val in self.data_dt_basePort.items() if val is not None}
-        self.user_starttime_dt = {val[self.idx_user]: val[self.idx_starttime] for val in self.data_dt_basePort.values() if val is not None}
+        load_data_ls = dill.loads(data_byte)
+        self.port_data_ls_dt = load_data_ls[0]
+        self.used_port_st = load_data_ls[1]
+        self.refresh_data()
 
     def load_data(self):
         with open(self.data_path, 'rb') as f:
             rd_byte = dill.load(f)
         data_byte = self.__ciper.decrypt(rd_byte)
         data_byte = data_byte.rstrip(b'\0')
+
         # refresh the data
-        self.data_dt_basePort = dill.loads(data_byte)
-        self.all_port_ls = list(self.data_dt_basePort.keys())
-        self.user_mail_dt = {val[self.idx_user]: val[self.idx_mail] for val in self.data_dt_basePort.values() if val is not None}
-        self.user_port_dt = {val[self.idx_user]: port for port, val in self.data_dt_basePort.items() if val is not None}
-        self.user_starttime_dt = {val[self.idx_user]: val[self.idx_starttime] for val in self.data_dt_basePort.values() if val is not None}
+        load_data_ls = dill.loads(data_byte)
+        self.port_data_ls_dt = load_data_ls[0]
+        self.used_port_st = load_data_ls[1]
+        self.refresh_data()
+
+    def refresh_data(self):
+        self.avail_port_st = self.stand_port_st.difference(self.used_port_st)
+        self.user_mail_dt = {val[self.idx_user]: val[self.idx_mail] for val in self.port_data_ls_dt.values()}
+        self.user_port_dt = {val[self.idx_user]: port for port, val in self.port_data_ls_dt.items()}
+        self.user_starttime_dt = {val[self.idx_user]: val[self.idx_starttime] for val in self.port_data_ls_dt.values()}
 
 
     # 容器高级操作（需要密码执行）
@@ -457,35 +467,35 @@ class __Um(object):
         self.load_data()
         p = self.user_port_dt[user_name]
         new_hashed_pw = bcrypt.hashpw(new_passwd.encode(), bcrypt.gensalt(10))
-        self.data_dt_basePort[p][self.idx_passwd] = new_hashed_pw
+        self.port_data_ls_dt[p][self.idx_passwd] = new_hashed_pw
         self.save_data()
         return True
 
     def change_mail(self, user_name, new_mail):
         self.load_data()
         p = self.user_port_dt[user_name]
-        self.data_dt_basePort[p][self.idx_mail] = new_mail
+        self.port_data_ls_dt[p][self.idx_mail] = new_mail
         self.save_data()
         return True
 
     def change_remark(self, user_name, new_mark):
         self.load_data()
         p = self.user_port_dt[user_name]
-        self.data_dt_basePort[p][self.idx_remark] = new_mark
+        self.port_data_ls_dt[p][self.idx_remark] = new_mark
         self.save_data()
         return True
 
     def change_phone(self, user_name, new_phone):
         self.load_data()
         p = self.user_port_dt[user_name]
-        self.data_dt_basePort[p][self.idx_phone] = new_phone
+        self.port_data_ls_dt[p][self.idx_phone] = new_phone
         self.save_data()
         return True
 
     def get_user_privacy(self, user_name):
         p = self.user_port_dt[user_name]
-        phone = self.data_dt_basePort[p][self.idx_phone]
-        mail = self.data_dt_basePort[p][self.idx_mail]
+        phone = self.port_data_ls_dt[p][self.idx_phone]
+        mail = self.port_data_ls_dt[p][self.idx_mail]
         ret = '{}, phone is {}, mail is {}'.format(user_name, phone, mail)
         return ret
 
@@ -516,7 +526,7 @@ class __Um(object):
                 res[name].append("NONE")
                 res[name].append("00:00:00")
             p = self.user_port_dt[name]
-            remark = self.data_dt_basePort[p][self.idx_remark]
+            remark = self.port_data_ls_dt[p][self.idx_remark]
             res[name].append(remark)
         return res
 
@@ -823,25 +833,7 @@ class __Um(object):
 
 
 def main():
-    srv_host_name = 'cmax'
-    docker_conf_dir = '/cmax_raid/docker_conf_dir'
-    docker_user_dir = '/cmax_raid/docker_user_dir'
-    docker_public_dir = '/cmax_raid/docker_public_dir'
-    passwd = '1234567890'
-
-    u = get_Um(docker_conf_dir, docker_user_dir, docker_public_dir, passwd, 29000)
-    # while True:
-    #     time.sleep(5)
-    # user_ls = os.listdir( '/amax_raid/docker_user_dir')
-    # for user in user_ls:
-    #     print(user)
-    #     u.create_user(user, '123456')
-
-    # for port, val in u.data_dt.items():
-    #     pw = val[1]
-    #     hashed_pw = bcrypt.hashpw(pw.encode(), bcrypt.gensalt(10))
-    #     u.data_dt[port][1] = hashed_pw
-
+    pass
 
 if __name__ == '__main__':
     main()
