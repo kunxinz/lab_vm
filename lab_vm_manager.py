@@ -133,6 +133,7 @@ class __Um(object):
         self.user_mail_dt = {}
         self.user_ls = []
         self.user_starttime_dt = {}
+        self.user_port_step_dt = {}
 
         self.idx_user = 0
         self.idx_passwd = 1
@@ -140,6 +141,7 @@ class __Um(object):
         self.idx_starttime = 3
         self.idx_remark = 4
         self.idx_phone = 5
+        self.idx_port_step = 6
 
         # init the ciper
         self.__ciper = None
@@ -341,7 +343,7 @@ class __Um(object):
             start_time = int(time.time())
 
             hash_pw = bcrypt.hashpw(passwd.encode('utf_8'), bcrypt.gensalt(10))
-            self.port_data_ls_dt[str(start_port)] = [user_name, hash_pw, mail, start_time, remark, phone]
+            self.port_data_ls_dt[str(start_port)] = [user_name, hash_pw, mail, start_time, remark, phone, self.port_step]
             self.used_port_st.update(set(range(start_port, start_port+self.port_step)))
             self.avail_port_st = self.avail_port_st.difference(self.used_port_st)
             self.save_data()
@@ -379,7 +381,8 @@ class __Um(object):
         try:
             # 先数据删除，然后再实际删除，这样哪怕实际删除不成功，也可以通过外部环境删除而不会造成数据损坏
             port = int(self.user_port_dt[user_name])
-            self.avail_port_st.update(set(range(port, port+self.port_step)))
+            port_step = self.port_data_ls_dt[str(port)][self.idx_port_step]  # 记录该容器的端口范围
+            self.avail_port_st.update(set(range(port, port+port_step)))
             del self.port_data_ls_dt[str(port)]
             self.save_data()
             ctan = self.containers.get(user_name)
@@ -452,7 +455,7 @@ class __Um(object):
         self.refresh_data()
 
     def refresh_data(self):
-        self.avail_port_st = self.stand_port_st.difference(self.used_port_st)
+        self.avail_port_st = self.stand_port_st.difference(self.used_port_st)  # 取差集
         self.user_mail_dt = {val[self.idx_user]: val[self.idx_mail] for val in self.port_data_ls_dt.values()}
         self.user_port_dt = {val[self.idx_user]: port for port, val in self.port_data_ls_dt.items()}
         self.user_starttime_dt = {val[self.idx_user]: val[self.idx_starttime] for val in self.port_data_ls_dt.values()}
@@ -597,14 +600,17 @@ class __Um(object):
 
     # 监控容器资源
     def chk_stats_timer_func(self):
+        running_ctans_ls = self.get_running_ctans_ls()
         try:
-            running_ctans_ls = self.get_running_ctans_ls()
-            for name in running_ctans_ls:
-                self.res_info[name] = self.__get_ctan_verbose_stats(name)
             self.gpu_info = self.__get_gpu_info()
-        except Exception:
+        except:
             traceback.print_exc()
-
+        for name in running_ctans_ls:
+            try:
+                self.res_info[name] = self.__get_ctan_verbose_stats(name)
+            except:
+                print(name)
+                traceback.print_exc()
         self.chk_stats_timer = threading.Timer(self.updateStatusPeriod, self.chk_stats_timer_func)
         self.chk_stats_timer.start()
 
