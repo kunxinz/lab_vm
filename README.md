@@ -33,7 +33,7 @@ docker pull kunxinz/lab-vm:xfce_cuda8.0 \
 \# docker build -f docker_file/Dockerfile.for_git -t lab_vm:xfce_cuda8_git docker_file
 
 #### 运行Server.py 文件。至此，lab_vm安装完毕
-docker_srv/venv/bin/python  docker_srv/Server.py
+venv/bin/python  Server.py -c lab_vm.conf
 
 # 基本使用步骤
 #### 打开浏览器，输入127.0.0.1:28125，即可访问web页面
